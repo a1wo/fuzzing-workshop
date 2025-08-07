@@ -1,0 +1,114 @@
+FROM ubuntu:24.04 AS aflplusplus-builder
+
+# Set build arguments
+ARG AFLPLUSPLUS_COMMIT=4f53803dfeca8f9da66aedbabeb25939031b8a57 # 4.30c version
+
+# Install build dependencies with better error handling
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    apt-get update -qq && apt-get update -qq && \
+    apt-get -y --no-install-recommends --fix-missing --allow-unauthenticated install \
+  autoconf \
+  automake \
+  build-essential \
+  cmake \
+  git-core \
+  git \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update -qq && apt-get -y --no-install-recommends --fix-missing install \
+  llvm \
+  llvm-dev \
+  clang \
+  clang-tools \
+  lld \
+  llvm-runtime \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update -qq && apt-get -y --no-install-recommends --fix-missing install \
+  wget \
+  gnupg \
+  software-properties-common \
+  python3 \
+  python3-pip \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install LLVM 18 from official repository
+RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
+    echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-18 main" >> /etc/apt/sources.list && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    apt-get update -qq
+    
+RUN apt-get -y --no-install-recommends --fix-missing install \
+    llvm-18 \
+    llvm-18-dev \
+    llvm-18-tools \
+    clang-18 \
+    clang-18-doc \
+    libclang-common-18-dev \
+    libclang-18-dev \
+    libclang1-18 \
+    clang-format-18 \
+    clangd-18 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Set LLVM 18 as default
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100 && \
+    update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-18 100
+
+# Install updated GDB and debugging tools
+RUN apt-get update -qq && apt-get -y --no-install-recommends --fix-missing install \
+    gdb \
+    gdb-multiarch \
+    valgrind \
+    strace \
+    ltrace \
+    binutils \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install meson and ninja using system packages
+RUN apt-get update -qq && apt-get -y --no-install-recommends --fix-missing install \
+    meson \
+    ninja-build \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Utils for working in the docker
+RUN apt-get update -qq && apt-get -y --no-install-recommends --fix-missing install \
+    curl \
+    vim \
+    apt \
+    htop \
+    git \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install utilities for a lot of libraries
+RUN apt-get update -qq && apt-get -y --no-install-recommends --fix-missing install \
+    build-essential \
+    libtool \
+    autoconf \
+    automake \
+    libglib2.0-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+
+# Install and build AFL++
+WORKDIR /afl
+RUN mkdir $HOME/afl/ && \
+    cd $HOME/afl/ && \
+    git clone https://github.com/AFLplusplus/AFLplusplus.git . && \
+    git reset --hard ${AFLPLUSPLUS_COMMIT} && \
+    make source-only -j$(nproc) && \
+    make install -j$(nproc)  && \
+    cd .. && rm -rf /AFLplusplus
+
+# Set environment variables for fuzzing
+ENV CC=clang-18
+ENV CXX=clang++-18
+ENV AFL_SKIP_CPUFREQ=1
+ENV AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
+
+# Set working directory
+WORKDIR /workspace
+
+# Default command
+CMD ["/bin/bash"]
