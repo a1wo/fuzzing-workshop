@@ -1,5 +1,10 @@
 #!/bin/bash
 
+cleanup() {
+    echo "[+] Cleaning up temporary files..."
+    rm -rf "$TMP_DIR"
+}
+
 # Intro
 echo "This script generates a coverage report from your fuzzing campaign."
 echo "You can even run this script while actively fuzzing the target."
@@ -13,6 +18,7 @@ DEFAULT_TARGET="/home/user/sadna/ex1/tiff-4.0.4/tools/tiffinfo"
 # Allow user to override default values via command-line arguments
 OUT_DIR="${1:-$DEFAULT_OUT_DIR}"
 TARGET="${2:-$DEFAULT_TARGET}"
+TMP_DIR="TMP"
 
 # Display variables to the user
 echo "The script will run with the following values:"
@@ -25,26 +31,27 @@ read -p "Do you want to continue? (y/n): " choice
 
 # In case this isn't our first time, we might want to clear previous .profraw files.
 # Delete all .profraw files in the output directory
-rm -f "$OUT_DIR"/*/queue/*.profraw
+rm -fr $TMP_DIR && mkdir -p $TMP_DIR
 
 # Check user response
 case "$choice" in
     y|Y ) 
         echo "Continuing script execution..."
         echo "[+] Extracting coverage data from each testcase in the corpus to a separate file"
-        for testcase in "$OUT_DIR"/*/queue/*; do 
-            export LLVM_PROFILE_FILE="$testcase.profraw"
+        for testcase in "$OUT_DIR"/*; do
+            export LLVM_PROFILE_FILE="$TMP_DIR/$(basename "$testcase").profraw"
+            echo $LLVM_PROFILE_FILE
             "$TARGET" "$testcase" > /dev/null 2>&1
         done
 
         echo "[+] Merge coverage (.profraw) data"
-        llvm-profdata-15 merge "$OUT_DIR"/*/queue/*.profraw -o cov.profdata
+        llvm-profdata-16 merge "$TMP_DIR"/*.profraw -o "$TMP_DIR"/cov.profdata
 
         echo "[+] Export to HTML format"
-        llvm-cov-15 show "$TARGET" -instr-profile=cov.profdata -format=html -o cov_merged
+        llvm-cov-16 show "$TARGET" -instr-profile="$TMP_DIR"/cov.profdata -format=html -o coverage_html
 
-        echo "[+] Open report"
-        xdg-open cov_merged/index.html
+        # echo "[+] Open report"
+        # xdg-open coverage_html/index.html
         ;;
     n|N ) 
         echo "Exiting script."
@@ -55,3 +62,5 @@ case "$choice" in
         exit 1
         ;;
 esac
+
+cleanup;
