@@ -6,7 +6,7 @@ clang++ -o target fuzz_target.cpp
 
 2. ASAN
 ```bash
-clang++ -fsanitize=address -o target fuzz_target.cpp
+clang++ -fsanitize=address -o fuzz_target fuzz_target.cpp
 ```
 
 does it change running speed?
@@ -18,7 +18,12 @@ strings fuzz_target | grep asan
 
 3. UBSAN
 ```bash
-clang++ -fsanitize=undefined -o target fuzz_target.cpp
+clang++ -fsanitize=undefined -o fuzz_target fuzz_target.cpp
+```
+
+check if compiled with UBSAN:
+```bash
+strings fuzz_target | grep undefined-behavior
 ```
 
 4. afl
@@ -64,11 +69,22 @@ afl-fuzz -i input -o output -P explore -L -1 -- ./fuzz_target @@
 
 3. make dictionary 
 ```bash
-strings /root/fuzzing-workshop/exercises/ex1/fuzz_target | grep -E "^[0-9]+$|^[A-Z]+[0-9]*$" >> dictionary.txt
+strings ./target | grep -E "^[0-9]+$|^[A-Z]+[0-9]*$" >> dictionary.txt
+sed 's/^".*"$/&/; t; s/^.*$/"&"/' dictionary.txt > dictionary_tmp.txt
+rm dictionary.txt && mv dictionary_tmp.txt dictionary.txt
 ```
+```bash
+afl-fuzz -i input -o output -x dictionary.txt -- ./fuzz_target @@
+```
+
+
 ## Triaging
 
 # coverage
+```bash
+../../scripts/coverage_report.sh output/default/queue/ ./cov_target
+cd coverage_html && python3 -m http.server 8000
+```
 
 # minimizing
 ```bash
