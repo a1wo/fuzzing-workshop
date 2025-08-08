@@ -2,3 +2,4 @@ output/
 input/
 .vscode/
 coverage_html/
+id_rsa_user

@@ -1,0 +1,4 @@
+Host fuzzing-workshop
+  HostName <host-ip>
+  User user
+  IdentityFile </path/to/ssh-key>

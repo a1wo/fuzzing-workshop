@@ -1,12 +1,23 @@
 FROM ubuntu:24.04 AS aflplusplus-builder
-
+USER root
 # Set build arguments
 ARG AFLPLUSPLUS_COMMIT=4f53803dfeca8f9da66aedbabeb25939031b8a57 # 4.30c version
 
+RUN rm -rf /var/lib/apt/lists/*
+RUN apt-get update -o Acquire::CompressionTypes::Order::=gz
+RUN apt-get update -y && apt-get upgrade -y
+RUN apt update
+# RUN echo "=== BEFORE sed ===" && cat /etc/apt/sources.list.d/ubuntu.sources
+RUN sed -i 's|http://ports.ubuntu.com/ubuntu-ports|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
+# RUN echo "=== AFTER sed ===" && cat /etc/apt/sources.list.d/ubuntu.sources
+
+
 # Install build dependencies with better error handling
+
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    apt-get update -qq && apt-get update -qq && \
-    apt-get -y --no-install-recommends --fix-missing --allow-unauthenticated install \
+    apt-get update -qq
+    
+RUN apt-get -y --no-install-recommends --fix-missing --allow-unauthenticated install \
   autoconf \
   automake \
   build-essential \
@@ -32,29 +43,29 @@ RUN apt-get update -qq && apt-get -y --no-install-recommends --fix-missing insta
   python3-pip \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install LLVM 18 from official repository
+# Install LLVM 16 from official repository
 RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
-    echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-18 main" >> /etc/apt/sources.list && \
+    echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-16 main" >> /etc/apt/sources.list && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     apt-get update -qq
     
 RUN apt-get -y --no-install-recommends --fix-missing install \
-    llvm-18 \
-    llvm-18-dev \
-    llvm-18-tools \
-    clang-18 \
-    clang-18-doc \
-    libclang-common-18-dev \
-    libclang-18-dev \
-    libclang1-18 \
-    clang-format-18 \
-    clangd-18 \
+    llvm-16 \
+    llvm-16-dev \
+    llvm-16-tools \
+    clang-16 \
+    clang-16-doc \
+    libclang-common-16-dev \
+    libclang-16-dev \
+    libclang1-16 \
+    clang-format-16 \
+    clangd-16 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set LLVM 18 as default
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100 && \
-    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100 && \
-    update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-18 100
+# Set LLVM 16 as default
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100 && \
+    update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-16 100
 
 # Install updated GDB and debugging tools
 RUN apt-get update -qq && apt-get -y --no-install-recommends --fix-missing install \
@@ -102,8 +113,8 @@ RUN mkdir $HOME/afl/ && \
     cd .. && rm -rf /AFLplusplus
 
 # Set environment variables for fuzzing
-ENV CC=clang-18
-ENV CXX=clang++-18
+ENV CC=clang-16
+ENV CXX=clang++-16
 ENV AFL_SKIP_CPUFREQ=1
 ENV AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
 
