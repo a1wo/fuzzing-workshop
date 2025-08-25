@@ -3,3 +3,7 @@ input/
 .vscode/
 coverage_html/
 id_rsa_user
+bruesls-workshop/
+slides/
+my-slides/
+.DS_Store
