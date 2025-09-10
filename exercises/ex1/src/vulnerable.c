@@ -13,6 +13,11 @@
 #define TRUE  4242
 #define FALSE 2424
 
+void crash() {
+    int* p = NULL;
+    // Dereference null pointer to cause crash
+    *p = 42;
+}
 
 int check_password (const char* password)
 {
@@ -75,7 +80,6 @@ int main (void)
             free(password);
             return 1;
         }
-
         key = malloc(sizeof(int));
         *key = atoi(raw_key);
     }
