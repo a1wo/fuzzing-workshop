@@ -25,9 +25,9 @@ int check_password (const char* password)
     unsigned char hash[SHA_DIGEST_LENGTH];
 
     strncpy(buf, password, BUF_SIZE);
-    SHA1(password, BUF_SIZE, hash);
+    SHA1((const unsigned char*)password, strlen(password), hash);
 
-    if (strncmp(hash, SECRET_PWORD, SHA_DIGEST_LENGTH) == 0) {
+    if (strncmp((const char*)hash, SECRET_PWORD, SHA_DIGEST_LENGTH) == 0) {
         return 1;
     }
 
@@ -59,7 +59,7 @@ int main (void)
     char* password = NULL;
     char* raw_key = NULL;
     int* key = NULL;
-    int* authorized = malloc(sizeof(int));
+    int* authorized = (int *)malloc(sizeof(int));
 
     printf("Password: ");
     password = get_input();
@@ -80,7 +80,7 @@ int main (void)
             free(password);
             return 1;
         }
-        key = malloc(sizeof(int));
+        key = (int *)malloc(sizeof(int));
         *key = atoi(raw_key);
     }
 
